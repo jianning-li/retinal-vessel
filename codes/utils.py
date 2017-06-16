@@ -165,7 +165,7 @@ def plot_AUC_ROC(fprs,tprs,method_names,fig_dir):
         else:
             plt.plot(fprs[index],tprs[index],colors[index],label=method_names[index].replace("_"," "))
     
-    plt.title('ROC curve')
+    plt.title('ROC Curve')
     plt.xlabel("1-Specificity")
     plt.ylabel("Sensitivity")
     plt.xlim(0,0.3)
