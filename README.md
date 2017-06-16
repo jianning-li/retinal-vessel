@@ -5,6 +5,7 @@
 
 ## Directory Hierarchy ##
 ```
+.
 ├── codes
 │   ├── evaluation.py
 │   ├── inference.py
@@ -33,12 +34,50 @@
     ├── DRIVE
     └── STARE
 ```
+**codes** : source codes   
+**data** : original data. File hierarchy is modified for convenience.  
+**evaluation** : quantitative and qualitative evaluation.  
+**inferenced_outputs** : outputs of inference with our model  
+**pretrained** : pretrained model and weights  
+**results** : results of other methods. These image files are retrieved from [here](http://www.vision.ee.ethz.ch/~cvlsegmentation/driu/downloads.html)  
 
 ## Training ##
-Move to codes and run train.py
-``` python train.py --ratio_gan2seg=<int> --gpu_index=<int> --batch_size=<int> --dataset=[DRIVE|STARE] --discriminator=[pixel|patch1|patch2|image]```
+Move to **codes** folder and run train.py 
 
+``` python train.py --ratio_gan2seg=<int> --gpu_index=<int> --batch_size=<int> --dataset=[DRIVE|STARE] --discriminator=[pixel|patch1|patch2|image]```
+### arguments ###
+ratio_gan2seg : trade-coefficient between GAN loss and segmentation loss  
+gpu_index : starting index for gpus to be used  
+batch_size : number of images per a batch  
+dataset : type of a dataset (DRIVE or STARE)  
+discriminator : type of a discriminator (pixel or patch1 or patch2 or image)  
 
 ## Inference ##
+Move to **codes** folder and run inferency.py
+
+``` python inference.py```
+
+Outputs of inference are generated in **inference_outputs** folder.
+
 
 ## Evaluation ##
+Move to **codes** folder and run evaluation.py
+
+``` python evaluation.py```
+
+Results are generated in **evaluation** folder. Hierarchy of the folder is
+
+```
+.
+├── DRIVE
+│   ├── comparison
+│   ├── measures
+│   └── vessels
+└── STARE
+    ├── comparison
+    ├── measures
+    └── vessels
+```
+**comparison** : difference maps of our method  
+**measures** : ROC and PR curves  
+**vessels** : vessels superimposed on segmented masks
