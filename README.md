@@ -63,7 +63,8 @@ batch_size : number of images per a batch
 dataset : type of a dataset (DRIVE or STARE)  
 discriminator : type of a discriminator (pixel or patch1 or patch2 or image)  
 
-###CAVEAT### : Note that training with the current codes requires main memory more than 50 GB and GPUs dedicated to Deep Learning. If no such system is available, it is recommended to use pre-trained model only for inference.
+###CAVEAT###
+Note that training with the current codes requires main memory more than 50 GB and GPUs dedicated to Deep Learning. If no such system is available, it is recommended to use pre-trained model only for inference.
 
 ## Inference ##
 Move to **codes** folder and run inferency.py
