@@ -3,6 +3,17 @@
 
 ![bitbucket_header.jpg](https://bitbucket.org/repo/ekyjKAX/images/3167681377-bitbucket_header.jpg)
 
+## Package Dependency ##
+scikit_image==0.12.3  
+Django==1.10.5  
+numpy==1.12.0  
+matplotlib==2.0.0  
+scipy==0.18.1  
+Keras==2.0.4  
+Pillow==4.1.1  
+skimage==0.0  
+scikit_learn==0.18.1  
+
 ## Directory Hierarchy ##
 ```
 .
@@ -81,3 +92,7 @@ Results are generated in **evaluation** folder. Hierarchy of the folder is
 **comparison** : difference maps of our method  
 **measures** : ROC and PR curves  
 **vessels** : vessels superimposed on segmented masks
+
+## LICENSE ##
+This is under the MIT License  
+Copyright (c) 2017 Vuno Inc. (www.vuno.co)
