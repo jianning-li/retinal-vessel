@@ -5,7 +5,6 @@
 
 ## Package Dependency ##
 scikit_image==0.12.3  
-Django==1.10.5  
 numpy==1.12.0  
 matplotlib==2.0.0  
 scipy==0.18.1  
