@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import matplotlib
-from django.core.management.commands.loaddata import humanize
 
 
 def all_files_under(path, extension=None, append_path=True, sort=True):
