@@ -150,7 +150,7 @@ def plot_AUC_ROC(fprs,tprs,method_names,fig_dir):
     
     # print auc  
     print "****** ROC AUC ******"
-    print "CAVEAT : AUC of RV-GAN with 8bit images might be lower than the floating point array (check <home>/pretrained/auc_roc*.npy)"
+    print "CAVEAT : AUC of V-GAN with 8bit images might be lower than the floating point array (check <home>/pretrained/auc_roc*.npy)"
     for index in indices:
         if method_names[index]!='CRFs' and method_names[index]!='2nd_manual':
             print "{} : {:04}".format(method_names[index],auc(fprs[index],tprs[index]))
@@ -184,7 +184,7 @@ def plot_AUC_PR(precisions, recalls, method_names, fig_dir):
 
     # print auc  
     print "****** Precision Recall AUC ******"
-    print "CAVEAT : AUC of RV-GAN with 8bit images might be lower than the floating point array (check <home>/pretrained/auc_pr*.npy)"
+    print "CAVEAT : AUC of V-GAN with 8bit images might be lower than the floating point array (check <home>/pretrained/auc_pr*.npy)"
     for index in indices:
         if method_names[index]!='CRFs' and method_names[index]!='2nd_manual':
             print "{} : {:04}".format(method_names[index],auc(recalls[index],precisions[index]))
