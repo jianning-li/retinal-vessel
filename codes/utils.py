@@ -1,7 +1,7 @@
 import os
 import sys
 
-from PIL import Image
+from PIL import Image, ImageEnhance
 from keras.preprocessing.image import Iterator
 from scipy.ndimage import rotate
 from skimage import filters
@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import matplotlib
-
+import random
 
 def all_files_under(path, extension=None, append_path=True, sort=True):
     if append_path:
@@ -135,7 +135,7 @@ def AUC_ROC(true_vessel_arr, pred_vessel_arr, save_fname):
     Area under the ROC curve with x axis flipped
     """
     fpr, tpr, _ = roc_curve(true_vessel_arr, pred_vessel_arr)
-    save_obj({"fpr":fpr, "tpr":tpr}, save_fname)
+    #save_obj({"fpr":fpr, "tpr":tpr}, save_fname)
     AUC_ROC=roc_auc_score(true_vessel_arr.flatten(), pred_vessel_arr.flatten())
     return AUC_ROC
 
@@ -210,7 +210,7 @@ def AUC_PR(true_vessel_img, pred_vessel_img, save_fname):
     Precision-recall curve
     """
     precision, recall, _ = precision_recall_curve(true_vessel_img.flatten(), pred_vessel_img.flatten(),  pos_label=1)
-    save_obj({"precision":precision, "recall":recall}, save_fname)
+    #save_obj({"precision":precision, "recall":recall}, save_fname)
     AUC_prec_rec = auc(recall, precision)
     return AUC_prec_rec
 
@@ -280,7 +280,19 @@ def pad_imgs(imgs, img_size):
     
     return padded
     
-def get_imgs(target_dir, augmentation, img_size, dataset):
+def random_perturbation(imgs):
+    for i in range(imgs.shape[0]):
+        im=Image.fromarray(imgs[i,...].astype(np.uint8))
+        en=ImageEnhance.Brightness(im)
+        im=en.enhance(random.uniform(0.8,1.2))
+        en=ImageEnhance.Color(im)
+        im=en.enhance(random.uniform(0.8,1.2))
+        en=ImageEnhance.Contrast(im)
+        im=en.enhance(random.uniform(0.8,1.2))
+        imgs[i,...]= np.asarray(im).astype(np.float32)
+    return imgs 
+    
+def get_imgs(target_dir, augmentation, img_size, dataset, mask=False):
     
     if dataset=='DRIVE':
         img_files, vessel_files, mask_files = DRIVE_files(target_dir)
@@ -290,12 +302,13 @@ def get_imgs(target_dir, augmentation, img_size, dataset):
     # load images    
     fundus_imgs=imagefiles2arrs(img_files)
     vessel_imgs=imagefiles2arrs(vessel_files)/255
-    mask_imgs=imagefiles2arrs(mask_files)/255
     fundus_imgs=pad_imgs(fundus_imgs, img_size)
     vessel_imgs=pad_imgs(vessel_imgs, img_size)
-    mask_imgs=pad_imgs(mask_imgs, img_size)
-    n_ori_imgs=fundus_imgs.shape[0]
-    assert(np.min(vessel_imgs)==0 and np.max(vessel_imgs)==1 and np.min(mask_imgs)==0 and np.max(mask_imgs)==1)
+    assert(np.min(vessel_imgs)==0 and np.max(vessel_imgs)==1)
+    if mask:
+        mask_imgs=imagefiles2arrs(mask_files)/255
+        mask_imgs=pad_imgs(mask_imgs, img_size)
+        assert(np.min(mask_imgs)==0 and np.max(mask_imgs)==1)
 
     # augmentation
     if augmentation:
@@ -306,24 +319,26 @@ def get_imgs(target_dir, augmentation, img_size, dataset):
         flipped_vessels=vessel_imgs[:,:,::-1]
         all_fundus_imgs.append(flipped_imgs)
         all_vessel_imgs.append(flipped_vessels)
-        for angle in range(5,360,5):  # rotated imgs 30~330
-            all_fundus_imgs.append(rotate(fundus_imgs, angle, axes=(1, 2), reshape=False))
-            all_fundus_imgs.append(rotate(flipped_imgs, angle, axes=(1, 2), reshape=False))
+        for angle in range(3,360,3):  # rotated imgs 3~360
+            all_fundus_imgs.append(random_perturbation(rotate(fundus_imgs, angle, axes=(1, 2), reshape=False)))
+            all_fundus_imgs.append(random_perturbation(rotate(flipped_imgs, angle, axes=(1, 2), reshape=False)))
             all_vessel_imgs.append(rotate(vessel_imgs, angle, axes=(1, 2), reshape=False))
             all_vessel_imgs.append(rotate(flipped_vessels, angle, axes=(1, 2), reshape=False))
         fundus_imgs=np.concatenate(all_fundus_imgs,axis=0)
         vessel_imgs=np.round((np.concatenate(all_vessel_imgs,axis=0)))
     
     # z score with mean, std of each image
-    means, stds=[],[]
     n_all_imgs=fundus_imgs.shape[0]
-    for index in range(n_ori_imgs):
-        means.append(np.mean(fundus_imgs[index,...][mask_imgs[index,...] == 1.0],axis=0))
-        stds.append(np.std(fundus_imgs[index,...][mask_imgs[index,...] == 1.0],axis=0))
     for index in range(n_all_imgs):
-        fundus_imgs[index,...]=(fundus_imgs[index,...]-means[index%n_ori_imgs])/stds[index%n_ori_imgs]
-
-    return fundus_imgs, vessel_imgs, mask_imgs
+        mean=np.mean(fundus_imgs[index,...][fundus_imgs[index,...,0] > 40.0],axis=0)
+        std=np.std(fundus_imgs[index,...][fundus_imgs[index,...,0] > 40.0],axis=0)
+        assert len(mean)==3 and len(std)==3
+        fundus_imgs[index,...]=(fundus_imgs[index,...]-mean)/std
+    
+    if mask:
+        return fundus_imgs, vessel_imgs, mask_imgs
+    else:
+        return fundus_imgs, vessel_imgs
 
 def pixel_values_in_mask(true_vessels, pred_vessels,masks):
     assert np.max(pred_vessels)<=1.0 and np.min(pred_vessels)>=0.0

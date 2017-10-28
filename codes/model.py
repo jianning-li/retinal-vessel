@@ -398,3 +398,18 @@ def GAN(g,d,img_size,n_filters_g, n_filters_d, alpha_recip, init_lr, name='gan')
         
     return gan
     
+def pretrain_g(g, img_size, n_filters_g, init_lr):
+    img_h, img_w=img_size[0], img_size[1]
+
+    img_ch=3
+    fundus = Input((img_h, img_w, img_ch))
+    generator=Model(fundus, g(fundus))
+
+    def g_loss(y_true, y_pred):
+        L_seg = objectives.binary_crossentropy(K.batch_flatten(y_true), K.batch_flatten(y_pred))
+        return L_seg
+    
+    
+    generator.compile(optimizer=Adam(lr=init_lr, beta_1=0.5), loss=g_loss, metrics=['accuracy'])
+        
+    return generator
