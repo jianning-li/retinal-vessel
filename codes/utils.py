@@ -135,19 +135,19 @@ def AUC_ROC(true_vessel_arr, pred_vessel_arr, save_fname):
     Area under the ROC curve with x axis flipped
     """
     fpr, tpr, _ = roc_curve(true_vessel_arr, pred_vessel_arr)
-    #save_obj({"fpr":fpr, "tpr":tpr}, save_fname)
+    save_obj({"fpr":fpr, "tpr":tpr}, save_fname)
     AUC_ROC=roc_auc_score(true_vessel_arr.flatten(), pred_vessel_arr.flatten())
     return AUC_ROC
 
-def plot_AUC_ROC(fprs,tprs,method_names,fig_dir):
+def plot_AUC_ROC(fprs,tprs,method_names,fig_dir,op_pts):
     # set font style
     font={'family':'serif'}
     matplotlib.rc('font', **font)
 
     # sort the order of plots manually for eye-pleasing plots
-    colors=['r','b','y','g','#7e7e7e','m','k','c'] if len(fprs)==8 else ['r','y','m','k','g']
-    indices=[6,2,5,3,4,7,1,0] if len(fprs)==8 else [3,1,2,4,0] 
-    
+    colors=['r','b','y','g','#7e7e7e','m','c','k', '#cd919e'] if len(fprs)==9 else ['r','y','m','g','k']
+    indices=[7,2,5,3,4,6,1,8,0] if len(fprs)==9 else [4,1,2,3,0] 
+
     # print auc  
     print "****** ROC AUC ******"
     print "CAVEAT : AUC of V-GAN with 8bit images might be lower than the floating point array (check <home>/pretrained/auc_roc*.npy)"
@@ -162,8 +162,12 @@ def plot_AUC_ROC(fprs,tprs,method_names,fig_dir):
         elif method_names[index]=='2nd_manual':
             plt.plot(fprs[index],tprs[index],colors[index]+'*',label='Human')
         else:
-            plt.plot(fprs[index],tprs[index],colors[index],label=method_names[index].replace("_"," "))
-    
+            plt.step(fprs[index],tprs[index],colors[index], where='post', label=method_names[index].replace("_"," "),linewidth=1.5)
+
+    # plot individual operation points
+    for op_pt in op_pts: 
+        plt.plot(op_pt[0],op_pt[1],'r.')
+
     plt.title('ROC Curve')
     plt.xlabel("1-Specificity")
     plt.ylabel("Sensitivity")
@@ -173,14 +177,14 @@ def plot_AUC_ROC(fprs,tprs,method_names,fig_dir):
     plt.savefig(os.path.join(fig_dir,"ROC.png"))
     plt.close()
 
-def plot_AUC_PR(precisions, recalls, method_names, fig_dir):
+def plot_AUC_PR(precisions, recalls, method_names, fig_dir, op_pts):
     # set font style
     font={'family':'serif'}
     matplotlib.rc('font', **font)
     
     # sort the order of plots manually for eye-pleasing plots
-    colors=['r','b','y','g','#7e7e7e','m','k','c'] if len(precisions)==8 else ['r','y','m','k','g']
-    indices=[6,2,5,3,4,7,1,0] if len(precisions)==8 else [3,1,2,4,0] 
+    colors=['r','b','y','g','#7e7e7e','m','c','k', '#cd919e'] if len(precisions)==9 else ['r','y','m','g','k']
+    indices=[7,2,5,3,4,6,1,8,0] if len(precisions)==9 else [4,1,2,3,0] 
 
     # print auc  
     print "****** Precision Recall AUC ******"
@@ -194,7 +198,11 @@ def plot_AUC_PR(precisions, recalls, method_names, fig_dir):
         if method_names[index]=='2nd_manual':
             plt.plot(recalls[index],precisions[index],colors[index]+'*',label='Human')
         else:
-            plt.plot(recalls[index],precisions[index],colors[index],label=method_names[index].replace("_"," "))
+            plt.step(recalls[index],precisions[index],colors[index], where='post', label=method_names[index].replace("_"," "),linewidth=1.5)
+    
+    # plot individual operation points
+    for op_pt in op_pts: 
+        plt.plot(op_pt[0],op_pt[1],'r.')
     
     plt.title('Precision Recall Curve')
     plt.xlabel("Recall")
@@ -210,7 +218,7 @@ def AUC_PR(true_vessel_img, pred_vessel_img, save_fname):
     Precision-recall curve
     """
     precision, recall, _ = precision_recall_curve(true_vessel_img.flatten(), pred_vessel_img.flatten(),  pos_label=1)
-    #save_obj({"precision":precision, "recall":recall}, save_fname)
+    save_obj({"precision":precision, "recall":recall}, save_fname)
     AUC_prec_rec = auc(recall, precision)
     return AUC_prec_rec
 
@@ -222,35 +230,56 @@ def load_obj(name):
     with open(name, 'rb') as f:
         return pickle.load(f)
 
-def threshold_by_otsu(pred_vessels, masks, connect=False, flatten=True):
+def best_f1_threshold(precision, recall, thresholds):
+    best_f1=-1
+    for index in range(len(precision)):
+        curr_f1=2.*precision[index]*recall[index]/(precision[index]+recall[index])
+        if best_f1<curr_f1:
+            best_f1=curr_f1
+            best_threshold=thresholds[index]
+
+    return best_f1, best_threshold
+
+def threshold_by_otsu(pred_vessels, masks, flatten=True):
     
     # cut by otsu threshold
     threshold=filters.threshold_otsu(pred_vessels[masks==1])
     pred_vessels_bin=np.zeros(pred_vessels.shape)
     pred_vessels_bin[pred_vessels>=threshold]=1
     
-    # connect pixels connected to strong intensity and has intensity more than otsu_th/factor
-    if connect:
-        factor=2
-        for i in range(pred_vessels.shape[0]):
-            pred_vessel=pred_vessels[i,...]
-            pred_vessel_bin=pred_vessels_bin[i,...]
-            pred_labels = measure.label(pred_vessel>threshold/factor)
-            labels=np.unique(pred_labels[pred_vessel_bin==1])
-            connected=np.in1d(pred_labels,labels).reshape(pred_vessels.shape)
-            pred_vessel_bin[(pred_vessel>threshold/factor) & connected]=1
-    
     if flatten:
         return pred_vessels_bin[masks==1].flatten()
     else:
         return pred_vessels_bin
 
-def misc_measures(true_vessel_arr, pred_vessel_arr):
-    cm=confusion_matrix(true_vessel_arr, pred_vessel_arr)
+def threshold_by_f1(true_vessels, generated, masks, flatten=True, f1_score=False):
+    vessels_in_mask, generated_in_mask = pixel_values_in_mask(true_vessels, generated, masks)
+    precision, recall, thresholds = precision_recall_curve(vessels_in_mask.flatten(), generated_in_mask.flatten(),  pos_label=1)
+    best_f1,best_threshold=best_f1_threshold(precision, recall, thresholds)
+        
+    pred_vessels_bin=np.zeros(generated.shape)
+    pred_vessels_bin[generated>=best_threshold]=1
+    
+    if flatten:
+        if f1_score:
+            return pred_vessels_bin[masks==1].flatten(), best_f1
+        else:
+            return pred_vessels_bin[masks==1].flatten()
+    else:
+        if f1_score:
+            return pred_vessels_bin, best_f1
+        else:
+            return pred_vessels_bin
+    
+def misc_measures(true_vessels, pred_vessels, masks):
+    thresholded_vessel_arr, f1_score = threshold_by_f1(true_vessels, pred_vessels, masks, f1_score=True)
+    true_vessel_arr=true_vessels[masks == 1].flatten()
+    
+    cm=confusion_matrix(true_vessel_arr, thresholded_vessel_arr)
     acc=1.*(cm[0,0]+cm[1,1])/np.sum(cm)
     sensitivity=1.*cm[1,1]/(cm[1,0]+cm[1,1])
     specificity=1.*cm[0,0]/(cm[0,1]+cm[0,0])
-    return acc, sensitivity, specificity
+    return f1_score, acc, sensitivity, specificity
 
 def dice_coefficient(true_vessels, pred_vessels, masks):
     thresholded_vessels=threshold_by_f1(true_vessels, pred_vessels, masks, flatten=False)
@@ -301,11 +330,7 @@ def pad_imgs(imgs, img_size):
 def random_perturbation(imgs):
     for i in range(imgs.shape[0]):
         im=Image.fromarray(imgs[i,...].astype(np.uint8))
-        en=ImageEnhance.Brightness(im)
-        im=en.enhance(random.uniform(0.8,1.2))
         en=ImageEnhance.Color(im)
-        im=en.enhance(random.uniform(0.8,1.2))
-        en=ImageEnhance.Contrast(im)
         im=en.enhance(random.uniform(0.8,1.2))
         imgs[i,...]= np.asarray(im).astype(np.float32)
     return imgs 
@@ -358,15 +383,35 @@ def get_imgs(target_dir, augmentation, img_size, dataset, mask=False):
     else:
         return fundus_imgs, vessel_imgs
 
-def pixel_values_in_mask(true_vessels, pred_vessels,masks):
+def operating_pts_human_experts(gt_vessels, pred_vessels, masks):
+    gt_vessels_in_mask, pred_vessels_in_mask = pixel_values_in_mask(gt_vessels, pred_vessels , masks, split_by_img=True)
+
+    n=gt_vessels_in_mask.shape[0]
+    op_pts_roc, op_pts_pr=[],[]
+    for i in range(n):
+        cm=confusion_matrix(gt_vessels_in_mask[i], pred_vessels_in_mask[i])
+        fpr=1-1.*cm[0,0]/(cm[0,1]+cm[0,0])
+        tpr=1.*cm[1,1]/(cm[1,0]+cm[1,1])
+        prec=1.*cm[1,1]/(cm[0,1]+cm[1,1])
+        recall=tpr
+        op_pts_roc.append((fpr,tpr))
+        op_pts_pr.append((recall,prec))
+
+    return op_pts_roc, op_pts_pr
+
+def pixel_values_in_mask(true_vessels, pred_vessels,masks, split_by_img=False):
     assert np.max(pred_vessels)<=1.0 and np.min(pred_vessels)>=0.0
     assert np.max(true_vessels)==1.0 and np.min(true_vessels)==0.0
     assert np.max(masks)==1.0 and np.min(masks)==0.0
     assert pred_vessels.shape[0]==true_vessels.shape[0] and masks.shape[0]==true_vessels.shape[0]
     assert pred_vessels.shape[1]==true_vessels.shape[1] and masks.shape[1]==true_vessels.shape[1]
     assert pred_vessels.shape[2]==true_vessels.shape[2] and masks.shape[2]==true_vessels.shape[2]
-     
-    return true_vessels[masks==1].flatten(), pred_vessels[masks==1].flatten() 
+    
+    if split_by_img:
+        n=pred_vessels.shape[0]
+        return np.array([true_vessels[i,...][masks[i,...]==1].flatten() for i in range(n)]), np.array([pred_vessels[i,...][masks[i,...]==1].flatten() for i in range(n)]) 
+    else: 
+        return true_vessels[masks==1].flatten(), pred_vessels[masks==1].flatten() 
 
 def remain_in_mask(imgs,masks):
     imgs[masks==0]=0
@@ -393,16 +438,23 @@ def crop_to_original(imgs, ori_shape):
             return imgs[(pred_h-ori_h)//2:(pred_h-ori_h)//2+ori_h,(pred_w-ori_w)//2:(pred_w-ori_w)//2+ori_w]
 
 def difference_map(ori_vessel, pred_vessel, mask):
-    # thresholding
-    ori_vessel=threshold_by_otsu(ori_vessel,mask, flatten=False)*255
-    pred_vessel=threshold_by_otsu(pred_vessel,mask, flatten=False)*255
+    # ori_vessel : an RGB image
     
+    thresholded_vessel=threshold_by_f1(np.expand_dims(ori_vessel, axis=0),np.expand_dims(pred_vessel, axis=0),
+                                np.expand_dims(mask, axis=0), flatten=False)
+    
+    thresholded_vessel=np.squeeze(thresholded_vessel, axis=0)
     diff_map=np.zeros((ori_vessel.shape[0],ori_vessel.shape[1],3))
-    diff_map[(ori_vessel==255) & (pred_vessel==255)]=(0,255,0)   #Green (overlapping)
-    diff_map[(ori_vessel==255) & (pred_vessel!=255)]=(255,0,0)    #Red (false negative, missing in pred)
-    diff_map[(ori_vessel!=255) & (pred_vessel==255)]=(0,0,255)    #Blue (false positive)
+    diff_map[(ori_vessel==1) & (thresholded_vessel==1)]=(0,255,0)   #Green (overlapping)
+    diff_map[(ori_vessel==1) & (thresholded_vessel!=1)]=(255,0,0)    #Red (false negative, missing in pred)
+    diff_map[(ori_vessel!=1) & (thresholded_vessel==1)]=(0,0,255)    #Blue (false positive)
 
-    return diff_map
+    # compute dice coefficient for a given image
+    overlap=len(diff_map[(ori_vessel==1) & (thresholded_vessel==1)])
+    fn=len(diff_map[(ori_vessel==1) & (thresholded_vessel!=1)])
+    fp=len(diff_map[(ori_vessel!=1) & (thresholded_vessel==1)])
+        
+    return diff_map, 2.*overlap/(2*overlap+fn+fp)
 
 class Scheduler:
     def __init__(self, n_itrs_per_epoch_d, n_itrs_per_epoch_g, schedules, init_lr):
