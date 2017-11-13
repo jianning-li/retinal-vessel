@@ -70,7 +70,7 @@ if not os.path.isdir(auc_out_dir):
     os.makedirs(auc_out_dir)
  
 # set training and validation dataset
-train_imgs, train_vessels =utils.get_imgs(train_dir, augmentation=False, img_size=img_size, dataset=dataset)
+train_imgs, train_vessels =utils.get_imgs(train_dir, augmentation=True, img_size=img_size, dataset=dataset)
 train_vessels=np.expand_dims(train_vessels, axis=3)
 n_all_imgs=train_imgs.shape[0]
 n_train_imgs=int((1-val_ratio)*n_all_imgs)
@@ -108,19 +108,18 @@ print "training {} images :".format(n_train_imgs)
 for n_round in range(n_rounds):
     
     # train D
-#     utils.make_trainable(d, True)
+    utils.make_trainable(d, True)
     for i in range(scheduler.get_dsteps()):
         real_imgs, real_vessels = next(train_batch_fetcher)
         d_x_batch, d_y_batch = utils.input2discriminator(real_imgs, real_vessels, g.predict(real_imgs,batch_size=batch_size), d_out_shape)
         loss, acc = d.train_on_batch(d_x_batch, d_y_batch)
   
     # train G (freeze discriminator)
-#     utils.make_trainable(d, False)
+    utils.make_trainable(d, False)
     for i in range(scheduler.get_gsteps()):
         real_imgs, real_vessels = next(train_batch_fetcher)
         g_x_batch, g_y_batch=utils.input2gan(real_imgs, real_vessels, d_out_shape)
-        loss, acc = gan.train_on_batch(g_x_batch, g_y_batch)
-        print d.layers[-1].get_weights()
+        loss, acc = gan.train_on_batch(g_x_batch, g_y_batch)        
   
     # evaluate on validation set
     if n_round in rounds_for_evaluation:
@@ -149,7 +148,7 @@ for n_round in range(n_rounds):
         auc_roc=utils.AUC_ROC(vessels_in_mask,generated_in_mask,os.path.join(auc_out_dir,"auc_roc_{}.npy".format(n_round)))
         auc_pr=utils.AUC_PR(vessels_in_mask, generated_in_mask,os.path.join(auc_out_dir,"auc_pr_{}.npy".format(n_round)))
         binarys_in_mask=utils.threshold_by_otsu(generated,test_masks)
-        dice_coeff=utils.dice_coefficient(vessels_in_mask, binarys_in_mask)
+        dice_coeff=utils.dice_coefficient_in_train(vessels_in_mask, binarys_in_mask)
         acc, sensitivity, specificity=utils.misc_measures(vessels_in_mask, binarys_in_mask)
         utils.print_metrics(n_round+1, auc_pr=auc_pr, auc_roc=auc_roc, dice_coeff=dice_coeff, 
                             acc=acc, senstivity=sensitivity, specificity=specificity, type='TESTING')
