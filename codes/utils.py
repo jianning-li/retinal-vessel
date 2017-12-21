@@ -195,7 +195,9 @@ def plot_AUC_PR(precisions, recalls, method_names, fig_dir, op_pts):
     
     # plot results
     for index in indices:
-        if method_names[index]=='2nd_manual':
+        if method_names[index]=='CRFs':
+            plt.plot(recalls[index],precisions[index],colors[index]+'*',label=method_names[index].replace("_"," "))
+        elif method_names[index]=='2nd_manual':
             plt.plot(recalls[index],precisions[index],colors[index]+'*',label='Human')
         else:
             plt.step(recalls[index],precisions[index],colors[index], where='post', label=method_names[index].replace("_"," "),linewidth=1.5)
