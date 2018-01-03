@@ -273,7 +273,7 @@ def threshold_by_f1(true_vessels, generated, masks, flatten=True, f1_score=False
         else:
             return pred_vessels_bin
     
-def misc_measures(true_vessels, pred_vessels, masks):
+def misc_measures_evaluation(true_vessels, pred_vessels, masks):
     thresholded_vessel_arr, f1_score = threshold_by_f1(true_vessels, pred_vessels, masks, f1_score=True)
     true_vessel_arr=true_vessels[masks == 1].flatten()
     
@@ -282,6 +282,13 @@ def misc_measures(true_vessels, pred_vessels, masks):
     sensitivity=1.*cm[1,1]/(cm[1,0]+cm[1,1])
     specificity=1.*cm[0,0]/(cm[0,1]+cm[0,0])
     return f1_score, acc, sensitivity, specificity
+
+def misc_measures(true_vessel_arr, pred_vessel_arr):
+    cm=confusion_matrix(true_vessel_arr, pred_vessel_arr)
+    acc=1.*(cm[0,0]+cm[1,1])/np.sum(cm)
+    sensitivity=1.*cm[1,1]/(cm[1,0]+cm[1,1])
+    specificity=1.*cm[0,0]/(cm[0,1]+cm[0,0])
+    return acc, sensitivity, specificity
 
 def dice_coefficient(true_vessels, pred_vessels, masks):
     thresholded_vessels=threshold_by_f1(true_vessels, pred_vessels, masks, flatten=False)

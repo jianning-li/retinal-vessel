@@ -66,7 +66,7 @@ for dataset in datasets:
                 # print metrics
                 print "-- {} --".format(os.path.basename(result))
                 print "dice coefficient : {}".format(utils.dice_coefficient(gt_vessels,pred_vessels, masks))
-                print "f1 score : {}, accuracy : {}, sensitivity : {}, specificity : {}".format(*utils.misc_measures(gt_vessels,pred_vessels, masks))
+                print "f1 score : {}, accuracy : {}, sensitivity : {}, specificity : {}".format(*utils.misc_measures_evaluation(gt_vessels,pred_vessels, masks))
  
                 # compute false positive rate, true positive graph
                 method=os.path.basename(result)
