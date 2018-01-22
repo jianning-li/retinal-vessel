@@ -1,6 +1,6 @@
 #V-GAN #
-### Retinal Vessel Segmentation in Fundoscopic Images with Generative Adversarial Networks ###
-[original paper](https://arxiv.org/pdf/1706.09318.pdf)
+### Retinal Vessel Segmentation in Fundoscopic Images with Generative Adversarial Networks [[original paper](https://arxiv.org/pdf/1706.09318.pdf)]###
+
 ![bitbucket_header.jpg](https://bitbucket.org/repo/ekyjKAX/images/3167681377-bitbucket_header.jpg)
 
 ## Package Dependency ##
